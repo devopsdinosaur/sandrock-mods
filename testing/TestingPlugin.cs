@@ -73,8 +73,24 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 	class HarmonyPatch_AnimalCardFightModule_BeginGame {
 
 		private static void Postfix(Pathea.AnimalCardFight.AnimalCardFightModule __instance) {
-			__instance.GetType().GetField("fadorTotal", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, 13);
-			__instance.EndGame();
+			try {
+				__instance.GetType().GetField("fadorTotal", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, 13);
+				Dictionary<int, Pathea.AnimalCardFight.AnimalCardFightData> animalCardFightDatas = (Dictionary<int, Pathea.AnimalCardFight.AnimalCardFightData>) __instance.GetType().GetField("animalCardFightDatas", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance);
+				animalCardFightDatas[(int) __instance.GetType().GetField("npcid", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance)].timesOfDay = 3;
+				__instance.GetType().GetField("animalCardFightDatas", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, animalCardFightDatas);
+				__instance.GetType().GetProperty("IsPlayAgain", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, false);
+				__instance.EndGame();
+			} catch (Exception e) {
+				logger.LogError("** HarmonyPatch_AnimalCardFightModule_BeginGame.Postfix ERROR - " + e);
+			}
+		}
+	}
+
+	[HarmonyPatch(typeof(Pathea.AnimalCardFight.AnimalCardFightModule), "Deserialize")]
+	class HarmonyPatch_AnimalCardFightModule_Deserialize {
+
+		private static void Postfix(Pathea.AnimalCardFight.AnimalCardFightModule __instance) {
+			__instance.GetType().GetField("lockNpcPlay", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, new List<int>());
 		}
 	}
 }
