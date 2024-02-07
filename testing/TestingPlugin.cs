@@ -11,6 +11,7 @@ using UnityEngine.Events;
 using TMPro;
 using Pathea.TreasureRevealerNs;
 using Pathea.AnimalCardFight;
+using Pathea.UISystemV2.UIControl;
 
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
@@ -97,33 +98,21 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 
-	[HarmonyPatch(typeof(TreasureRevealerManager), "Deactive")]
-	class HarmonyPatch_TreasureRevealerManager_Deactive {
+	[HarmonyPatch(typeof(MapPartControl), "EnoughFavor")]
+	class HarmonyPatch_MapPartControl_EnoughFavor {
 
-		private static bool Prefix(TreasureRevealerManager __instance) {
-			StackTrace stack_trace = new StackTrace();
-			int index = 0;
-			logger.LogInfo(Time.time);
-			foreach (StackFrame frame in stack_trace.GetFrames()) {
-				logger.LogInfo($"{index++}: {frame.GetMethod().Name}");
-			}
-			return true;
+		private static bool Prefix(MapPartControl __instance, ref bool __result) {
+			__result = true;
+			return false;
 		}
 	}
-
 
 	[HarmonyPatch(typeof(TreasureRevealerManager), "DetectorUpdate")]
 	class HarmonyPatch_TreasureRevealerManager_DetectorUpdate {
 
 		static Type m_data_type = null;
 
-		private static bool Prefix(
-			Vector3 position,
-			TreasureRevealerManager __instance,
-			TreasureRevealerDetector ___detector,
-			ref float ___currentScanRadius,
-			List<ITreasureRevealerTarget> ___targets
-		) {
+		private static bool Prefix(TreasureRevealerManager __instance) {
 			try {
 				if (!__instance.IsActive) {
 					return false;
@@ -134,57 +123,14 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 							m_data_type = type;
 						}
 					}
-					logger.LogInfo((m_data_type == null ? "null" : "not null"));
 				}
 				float activeTime = (float) __instance.GetType().GetField("activeTime", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance);
 				object data = __instance.GetType().GetField("detectorData", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(__instance);
 				m_data_type.GetField("durationSec").SetValue(data, 99999);
 				__instance.GetType().GetField("detectorData", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(__instance, data);
 				return true;
-				/*
-				float durationSec = (float) m_data_type.GetField("durationSec").GetValue(data);
-				float radius = (float) m_data_type.GetField("radius").GetValue(data);
-				float scanAddRadius = (float) m_data_type.GetField("scanAddRadius").GetValue(data);
-				float num = activeTime + durationSec;
-				
-				logger.LogInfo($"durationSec: {durationSec}, num: {num}, Time.time: {Time.time}");
-
-				return true;
-				
-				//if (Time.time > num)
-				//{
-				//	Deactive();
-				//	return;
-				//}
-				float num2 = Time.time - activeTime;
-				float num3 = radius / scanAddRadius;
-				float num4 = durationSec - __instance.Setting.detectorLightDisappearSec;
-				float num5;
-				if (num2 > num4) {
-					float fadeOut = Mathf.Clamp01((num2 - num4) / __instance.Setting.detectorLightDisappearSec);
-					___detector.SetFadeOut(fadeOut);
-					num5 = 1f;
-				}
-				else if (num2 > num3) {
-					num5 = 1f;
-				} else {
-					num5 = Mathf.Clamp01(num2 / num3);
-					___detector.Set(num5, radius);
-				}
-				___currentScanRadius = radius * num5;
-				for (int i = 0; i < ___targets.Count; i++) {
-					ITreasureRevealerTarget treasureRevealerTarget = ___targets[i];
-					if (treasureRevealerTarget.IsValid && !treasureRevealerTarget.Detected && __instance.IsTargetInCurrentRange(treasureRevealerTarget)) {
-						treasureRevealerTarget.Detected = true;
-						
-						//__instance.OnTargetDetected?.Invoke(treasureRevealerTarget);
-					}
-				}
-				___detector.transform.position = position;
-				return false;
-				*/
 			} catch (Exception e) {
-				logger.LogError("** ERROR - " + e);
+				logger.LogError("** HarmonyPatch_TreasureRevealerManager_DetectorUpdate ERROR - " + e);
 			}
 			return true;
 		}
