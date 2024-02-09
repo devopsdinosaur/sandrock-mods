@@ -9,9 +9,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
+using Pathea;
 using Pathea.TreasureRevealerNs;
 using Pathea.AnimalCardFight;
 using Pathea.UISystemV2.UIControl;
+using Pathea.StoryScriptExt;
+using Pathea.MachineNs;
+using Pathea.StoreNs;
+using Pathea.ItemNs;
+using Pathea.MissionNs;
 
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
@@ -136,4 +142,50 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 
+	[HarmonyPatch(typeof(OnPlayerChopTreeFall), "Filter")]
+	class HarmonyPatch_OnPlayerChopTreeFall_Filter {
+
+		private static bool Prefix(ref bool __result) {
+			__result = true;
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(MachineSupport), "UpdatePerMinuteCost")]
+	class HarmonyPatch_MachineSupport_UpdatePerMinuteCost {
+
+		private static bool Prefix() {
+			GlobalModule.Self.GlobalMisc.seasonWaterRate = new float[GlobalModule.Self.GlobalMisc.seasonWaterRate.Length];
+			for (int index = 0; index < GlobalModule.Self.GlobalMisc.seasonWaterRate.Length; index++) {
+				GlobalModule.Self.GlobalMisc.seasonWaterRate[index] = 0;
+			}
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(Store), "IsOpen")]
+	class HarmonyPatch_Store_IsOpen {
+
+		private static bool Prefix(ref bool __result) {
+			__result = true;
+			return false;
+		}
+	}
+
+	/*
+	[HarmonyPatch(typeof(Store), "CanRecycle")]
+	class HarmonyPatch_Store_CanRecycle {
+
+		private static void Postfix(Store __instance, ItemInstance item, ref CannotRecycleReason cannotRecycleReason, ref bool __result) {
+			logger.LogInfo($"HarmonyPatch_Store_CanRecycle(item: {item.GetName()})");
+			if (cannotRecycleReason == CannotRecycleReason.StoreRefuse) {
+				foreach (int tag in item.ItemTag) {
+					__instance.data.recycle.AddItem(new IdFloat(tag, 99999));
+				}
+				cannotRecycleReason = CannotRecycleReason.None;
+				__result = true;
+			}
+		}
+	}
+	*/
 }
