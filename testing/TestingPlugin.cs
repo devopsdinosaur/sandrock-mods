@@ -18,6 +18,8 @@ using Pathea.MachineNs;
 using Pathea.StoreNs;
 using Pathea.ItemNs;
 using Pathea.MissionNs;
+using Pathea.UISystemV2.UI;
+using UnityExtensions;
 
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
@@ -188,4 +190,43 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 	*/
+
+	[HarmonyPatch(typeof(LoadingMaskUI), "SetDisplay")]
+	[HarmonyPatch(new Type[] {typeof(string), typeof(string), typeof(Sprite), typeof(string), typeof(bool)})]
+	class HarmonyPatch_LoadingMaskUI_SetDisplay {
+
+		private static bool Prefix(ref string hint, string sceneName, Sprite sprite, string path, bool useBg) {
+			//logger.LogInfo($"hint: {hint}, sceneName: {sceneName}, sprite: {sprite}, path: {path}, useBg: {useBg}");
+			hint = "Your mother was a hamster and your father smelled of elderberries!";
+			return true;
+		}
+	}
+
+	/*
+	[HarmonyPatch(typeof(LoadingMaskForStart), "Start")]
+	class HarmonyPatch_LoadingMaskForStart_Start {
+
+		private static bool Prefix(
+			GameObject ___warning,
+			GameObject ___warningSpeciallySupport,
+			GameObject ___warning_bilibili,
+			GameObject ___warning_platform
+		) {
+			logger.LogInfo($"warning: {(bool) ___warning}, warningSS: {(bool) ___warningSpeciallySupport}, warningBB: {(bool) ___warning_bilibili}, warningPlatform: {(bool) ___warning_platform}");
+			return true;
+		}
+	}
+	*/
+
+	[HarmonyPatch(typeof(LoadingMaskForStart), "Awake")]
+	class HarmonyPatch_LoadingMaskForStart_Awake {
+
+		private static bool Prefix(Tween[] ___needResetTweens) {
+			foreach (Tween tween in ___needResetTweens) {
+				tween.duration = 0;
+				logger.LogInfo($"tween - name: {tween.name}, duration: {tween.duration}");
+			}
+			return true;
+		}
+	}
 }

@@ -60,6 +60,9 @@
     <Reference Include="Pathea.Framework">
       <HintPath>..\libs\Pathea.Framework.dll</HintPath>
     </Reference>
+    <Reference Include="Pathea.WhiteCat">
+      <HintPath>..\libs\Pathea.WhiteCat.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>..\libs\Unity.TextMeshPro.dll</HintPath>
     </Reference>
