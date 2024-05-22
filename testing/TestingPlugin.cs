@@ -202,22 +202,6 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 
-	/*
-	[HarmonyPatch(typeof(LoadingMaskForStart), "Start")]
-	class HarmonyPatch_LoadingMaskForStart_Start {
-
-		private static bool Prefix(
-			GameObject ___warning,
-			GameObject ___warningSpeciallySupport,
-			GameObject ___warning_bilibili,
-			GameObject ___warning_platform
-		) {
-			logger.LogInfo($"warning: {(bool) ___warning}, warningSS: {(bool) ___warningSpeciallySupport}, warningBB: {(bool) ___warning_bilibili}, warningPlatform: {(bool) ___warning_platform}");
-			return true;
-		}
-	}
-	*/
-
 	[HarmonyPatch(typeof(LoadingMaskForStart), "Awake")]
 	class HarmonyPatch_LoadingMaskForStart_Awake {
 
