@@ -20,6 +20,7 @@ using Pathea.ItemNs;
 using Pathea.MissionNs;
 using Pathea.UISystemV2.UI;
 using UnityExtensions;
+using Pathea.SendGiftNs;
 
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
@@ -222,4 +223,23 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 			return false;
 		}
 	}
+
+    [HarmonyPatch(typeof(SendGiftModule), "GetRepeatGiftCount")]
+    class HarmonyPatch_SendGiftModule_GetRepeatGiftCount {
+
+        private static bool Prefix(ref int __result) {
+            __result = 0;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MachineStatus))]
+	[HarmonyPatch("IsSandBlock", MethodType.Getter)]
+    class HarmonyPatch_IsSandBlock_Getter {
+
+        private static bool Prefix(ref bool __result) {
+            __result = false;
+            return false;
+        }
+    }
 }
