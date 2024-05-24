@@ -213,4 +213,13 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 			return true;
 		}
 	}
+
+	[HarmonyPatch(typeof(AutoDoorCondition_Favor), "IsOk")]
+	class HarmonyPatch_AutoDoorCondition_Favor_IsOk {
+
+		private static bool Prefix(ref bool __result) {
+			__result = true;
+			return false;
+		}
+	}
 }
