@@ -21,7 +21,7 @@ using Pathea.MissionNs;
 using Pathea.UISystemV2.UI;
 using UnityExtensions;
 using Pathea.SendGiftNs;
-
+using Pathea.RandomDungeonNs;
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
 public class ActionSpeedPlugin : BaseUnityPlugin {
@@ -242,4 +242,13 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
             return false;
         }
     }
+
+	[HarmonyPatch(typeof(TrialDungeonModule), "InitDungeonData")]
+	class HarmonyPatch_TrialDungeonModule_InitDungeonData {
+
+		private static bool Prefix(ref bool jumpTime) {
+			jumpTime = false;
+			return true;
+		}
+	}
 }
