@@ -22,6 +22,7 @@ using Pathea.UISystemV2.UI;
 using UnityExtensions;
 using Pathea.SendGiftNs;
 using Pathea.RandomDungeonNs;
+using Pathea.DanceNs;
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
 public class ActionSpeedPlugin : BaseUnityPlugin {
@@ -248,6 +249,18 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 
 		private static bool Prefix(ref bool jumpTime) {
 			jumpTime = false;
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(Dancer), "AddScore")]
+	class HarmonyPatch_Dancer_AddScore {
+
+		private static bool Prefix(Dancer __instance, DanceRhythmData danceRhythmData) {
+			if (__instance.actor.InstanceId != 8000) {
+				return true;
+			}
+			danceRhythmData.danceRhythmLevelType = DanceRhythmLevelType.Perfect;
 			return true;
 		}
 	}
