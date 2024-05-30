@@ -27,9 +27,76 @@ using Pathea.UseItemNs;
 using Pathea.ActorNs;
 using Pathea.HoldableNs;
 using Pathea.VoxelAimNs;
+using Pathea.ResourcePointNs;
+using Pathea.Mtas;
+using Pathea.TerrainTree;
+/*
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Cinemachine;
+using Pathea.ActionNs;
+using Pathea.ActorDramaNs;
+using Pathea.AffixNs;
+using Pathea.AimSystemNs;
+using Pathea.Attr;
+using Pathea.Audios;
+using Pathea.BattleFieldNs;
+using Pathea.BehaviorNs;
+using Pathea.CamCaptureNs;
+using Pathea.CameraNs;
+using Pathea.CatchNs;
+using Pathea.ConversationNs;
+using Pathea.CustomPlayer;
+using Pathea.DramaNs;
+using Pathea.EnvironmentNs;
+using Pathea.EquipmentNs;
+using Pathea.FactionNs;
+using Pathea.FestivalNs;
+using Pathea.FestivalNs.HidenSeek;
+using Pathea.FootstepNs;
+using Pathea.FovNs;
+using Pathea.FrameworkNs;
+using Pathea.FxNs;
+using Pathea.GeneratorNs;
+using Pathea.Gun;
+using Pathea.HoldableNs;
+using Pathea.HomeNs;
+using Pathea.HomeViewerNs;
+using Pathea.HotAreaNs;
+using Pathea.InfoTip;
+using Pathea.ItemAttrNs;
+using Pathea.ItemContainers;
+using Pathea.ItemFuncNs;
+using Pathea.ItemNs;
+using Pathea.MachineNs;
+using Pathea.MapNs;
+using Pathea.MountNs;
+using Pathea.NearCameraFadeNs;
+using Pathea.NpcAI;
+using Pathea.OptionNs;
+using Pathea.PatheaGDCNs;
+using Pathea.Plants;
+using Pathea.RepairNs;
+using Pathea.RideNs;
+using Pathea.ScenarioNs;
+using Pathea.SceneInfoNs;
+using Pathea.SkillNs;
+using Pathea.SkillNs.SR;
+using Pathea.StatisticsNs;
+using Pathea.TakeThingNs;
+using Pathea.TerrainTree;
+using Pathea.TimeNs;
+using Pathea.UseItemNs;
+using UnityEngine;
+using UtilNs;
+*/
+using Pathea.FrameworkNs;
+using Pathea.EquipmentNs;
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
-public class ActionSpeedPlugin : BaseUnityPlugin {
+public class TestingPlugin : BaseUnityPlugin {
 
 	private Harmony m_harmony = new Harmony("devopsdinosaur.sunhaven.testing");
 	public static ManualLogSource logger;
@@ -161,7 +228,16 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 
-	[HarmonyPatch(typeof(OnPlayerChopTreeFall), "Filter")]
+    [HarmonyPatch(typeof(JetPack), "Start")]
+    class HarmonyPatch_JetPack_Start {
+
+        private static bool Prefix(JetPack __instance) {
+            __instance.SetCostSpeed(0);
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(OnPlayerChopTreeFall), "Filter")]
 	class HarmonyPatch_OnPlayerChopTreeFall_Filter {
 
 		private static bool Prefix(ref bool __result) {
@@ -280,21 +356,137 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 		}
 	}
 
-	[HarmonyPatch(typeof(VoxelTarget), "DoDig")]
+    [HarmonyPatch(typeof(Player), "CheckTired")]
+    class HarmonyPatch_Player_CheckTired {
+
+        private static bool Prefix() {
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(VoxelTarget), "DoDig")]
 	class HarmonyPatch_XXX_XXX {
 
 		private static bool Prefix(ref float radius) {
 			radius *= 2.0f;
+			//foreach (CatchableResourcePoint catchable in Resources.FindObjectsOfTypeAll<CatchableResourcePoint>()) {
+			//	catchable.GetType().GetMethod("DoGetItem", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(catchable, new object[] {true});
+			//}
 			return true;
 		}
 	}
 
-	[HarmonyPatch(typeof(ColliderActorTrigger), "OnTriggerEnter")]
-	class HarmonyPatch_XXX_XXXa {
+	private class PluginUpdater : MonoBehaviour {
+		
+		private static PluginUpdater m_instance = null;
+		public static PluginUpdater Instance {
+			get { 
+				return m_instance; 
+			}
+		}
+		private class UpdateInfo {
+			public string name;
+			public float frequency;
+			public float elapsed;
+			public Action action;
+		}
+		private List<UpdateInfo> m_actions = new List<UpdateInfo>();
 
-		private static bool Prefix() {
-			logger.LogInfo(actionName);
-			return true;
+		public static PluginUpdater create(GameObject parent) {
+			if (m_instance != null) {
+				return m_instance;
+			}
+			return (m_instance = parent.AddComponent<PluginUpdater>());
+        }
+
+		public void register(string name, float frequency, Action action) {
+			m_actions.Add(new UpdateInfo {
+				name = name,
+				frequency = frequency, 
+				elapsed = 0f, 
+				action = action
+			});
+		}
+		
+		public void Update() {
+			foreach (UpdateInfo info in m_actions) {
+				if ((info.elapsed += Time.deltaTime) >= info.frequency) {
+                    info.elapsed = 0f;
+					try {
+						info.action();
+					} catch(Exception e) {
+						logger.LogError($"PluginUpdater.Update.{info.name} Exception - {e.ToString()}");
+					}
+				}
+			}
 		}
 	}
+
+    [HarmonyPatch(typeof(WorldLauncher), "Awake")]
+    class HarmonyPatch_WorldLauncher_Awake {
+
+        private static bool Prefix(WorldLauncher __instance) {
+            PluginUpdater.create(__instance.gameObject);
+			PluginUpdater.Instance.register("bulldozer_update", 0.5f, bulldozer_update);
+            return true;
+        }
+    }
+
+	public static void bulldozer_update() {
+        ActorViewModel model = null;
+		BaseData data = null;
+        foreach (ActorViewModel _model in Resources.FindObjectsOfTypeAll<ActorViewModel>()) {
+			if (_model == null || (data = (BaseData) _model.GetType().GetField("baseData", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(_model)) == null) {
+				continue;
+			}
+			model = _model;
+			break;
+		}
+		if (data == null) {
+			return;
+		}
+		//logger.LogInfo(Module<Player>.Self.GamePos);
+		return;
+        foreach (CatchableResourcePoint catchable in Resources.FindObjectsOfTypeAll<CatchableResourcePoint>()) {
+            float distance = Vector3.Distance(model.transform.position, catchable.transform.position);
+			//logger.LogInfo($"distance to {catchable.name} == {distance}");
+			if (distance > 5) {
+				continue;
+			}
+            catchable.GetType().GetMethod("DoGetItem", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(catchable, new object[] { true });
+        }
+		foreach (TerrainTreeObject tree in Resources.FindObjectsOfTypeAll<TerrainTreeObject>()) {
+            float distance = Vector3.Distance(model.transform.position, tree.transform.position);
+            if (distance > 5) {
+                continue;
+            }
+			logger.LogInfo(tree.name);
+        }
+    }
+
+    [HarmonyPatch(typeof(Player), "Update")]
+    class HarmonyPatch_Player_Update {
+
+        private static bool Prefix(Player __instance) {
+            if (__instance.actor == null) {
+				return true;
+			}
+
+            return true;
+        }
+    }
+
+    /*
+    [HarmonyPatch(typeof(ActorViewModel), "Update")]
+	class HarmonyPatch_XXX_XXXx {
+
+		private static bool Prefix(ActorViewModel __instance) {
+			if (__instance.actorID != 8000) {
+				return true;
+			}
+			logger.LogInfo(__instance.transform.position);
+			return true;
+		}
+    }
+	*/
 }
