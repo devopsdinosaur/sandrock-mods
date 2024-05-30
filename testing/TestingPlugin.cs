@@ -23,6 +23,10 @@ using UnityExtensions;
 using Pathea.SendGiftNs;
 using Pathea.RandomDungeonNs;
 using Pathea.DanceNs;
+using Pathea.UseItemNs;
+using Pathea.ActorNs;
+using Pathea.HoldableNs;
+using Pathea.VoxelAimNs;
 
 [BepInPlugin("devopsdinosaur.sunhaven.testing", "Testing", "0.0.1")]
 public class ActionSpeedPlugin : BaseUnityPlugin {
@@ -80,6 +84,17 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 	public static void list_component_types(Transform obj) {
 		foreach (Component component in obj.GetComponents<Component>()) {
 			logger.LogInfo(component.GetType().ToString());
+		}
+	}
+
+	public static void print_stack() {
+		for (int index = 0; ; index++) {
+			try {
+				StackFrame frame = new StackFrame(index);
+				logger.LogInfo($"StackFrame[{index}] - file: {frame.GetFileName()}, line: {frame.GetFileLineNumber()}, method: {frame.GetMethod().Name}");
+			} catch {
+				break;	
+			}
 		}
 	}
 
@@ -261,6 +276,24 @@ public class ActionSpeedPlugin : BaseUnityPlugin {
 				return true;
 			}
 			danceRhythmData.danceRhythmLevelType = DanceRhythmLevelType.Perfect;
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(VoxelTarget), "DoDig")]
+	class HarmonyPatch_XXX_XXX {
+
+		private static bool Prefix(ref float radius) {
+			radius *= 2.0f;
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(ColliderActorTrigger), "OnTriggerEnter")]
+	class HarmonyPatch_XXX_XXXa {
+
+		private static bool Prefix() {
+			logger.LogInfo(actionName);
 			return true;
 		}
 	}
