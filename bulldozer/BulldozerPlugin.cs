@@ -16,6 +16,8 @@ using Pathea.MonsterNs;
 using Pathea.HatredNs;
 using Pathea.ProficiencyNs;
 using Pathea.Attr;
+using Pathea.ScenarioNs;
+using Pathea.ItemNs;
 
 [BepInPlugin("devopsdinosaur.sandrock.bulldozer", "Bulldozer", "0.0.1")]
 public class BulldozerPlugin : BaseUnityPlugin {
@@ -109,12 +111,35 @@ public class BulldozerPlugin : BaseUnityPlugin {
 
 	public static void bulldozer_update() {
 		
-		void bulldoze_resource<T>(Player _player) where T : MonoBehaviour {
+		void bulldoze_resource<T>(Player _player, AttrData _data) where T : ResourcePointBase {
 			foreach (T obj in Resources.FindObjectsOfTypeAll<T>()) {
 				if (Vector3.Distance(_player.GamePos, obj.transform.position) <= m_bulldoze_radius.Value) {
 					try {
+						float current_sp = _data.runtimeAttr[ActorRunTimeAttrType.Sp];
+						if ((bool) obj.GetType().GetField("useAutoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj)) {
+							logger.LogInfo(obj.name);
+							int autoGeneratorGroupCount = (int) obj.GetType().GetField("autoGeneratorGroupCount", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
+							GeneratorGroup autoGeneratorGroup = (GeneratorGroup) obj.GetType().GetField("autoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
+							List<int> id_list = new List<int>();
+							for (int counter = 1; counter < autoGeneratorGroupCount; counter++) {
+								obj.itemDrop.CreateDropItem(
+									autoGeneratorGroup.generatorGroupId, 
+									0f, 
+									obj.ResourcePointData.GetScale(), 
+									Module<ScenarioModule>.Self.CurScene,
+									(int) obj.GetType().GetProperty("itemLevel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj),
+									canDetected: false, 
+									delegate (List<ItemInstance> itemInstances) {
+									}, 
+									id_list
+								);
+								Module<ResourceAreaModule>.Self.GatherDropItemAction(id_list);
+								Module<ResourceAreaModule>.Self.PlayerGetResourcePointAction(obj.ResourcePointData);
+							}
+						}
 						obj.GetType().GetMethod("DoGetItem", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(obj, new object[] {true});
 						Module<ProficiencyModule>.Self.AddAttrModifierByType(ProficiencyType.Gather, new AttrModifier(ModifyAttrType.FinalPlus, m_gather_exp.Value));
+						_data.runtimeAttr.SetCurrenValue(ActorRunTimeAttrType.Sp, current_sp);
 					} catch {}
 				}
 			}
@@ -124,16 +149,20 @@ public class BulldozerPlugin : BaseUnityPlugin {
 			return;
 		}
 		Player player = null;
+		AttrCmpt cmpt = null;
+		AttrData data = null;
 		try {
 			player = Module<Player>.Self;
 			if (player == null) {
 				return;
 			}
+			cmpt = (AttrCmpt) player?.actor.GetType().GetField("attrCmpt", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(player?.actor);
+			data = (AttrData) (cmpt != null ? cmpt.GetType().GetField("attrData", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(cmpt) : null);
 		} catch {
 			return;
 		}
 		if (m_bulldoze_nodes.Value) {
-			bulldoze_resource<CatchableResourcePoint>(player);
+			bulldoze_resource<CatchableResourcePoint>(player, data);
 		}
 		if (m_bulldoze_terrain.Value) {
 			foreach (GameObject top_obj in SceneManager.GetActiveScene().GetRootGameObjects()) {
@@ -154,7 +183,7 @@ public class BulldozerPlugin : BaseUnityPlugin {
 					}
 				}
 			}
-			bulldoze_resource<ResourcePoint>(player);
+			bulldoze_resource<ResourcePoint>(player, data);
 		}
 		if (m_bulldoze_monsters.Value) {
 			Scene scene = SceneManager.GetSceneByName("Game");

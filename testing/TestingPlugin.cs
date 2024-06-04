@@ -36,6 +36,9 @@ using Pathea.ActionNs;
 using UnityEngine.SceneManagement;
 using Pathea.MonsterNs;
 using Pathea.HatredNs;
+using Pathea.DynamicWishNs;
+using Pathea.ItemContainers;
+using Pathea.NpcNs;
 
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
@@ -335,4 +338,31 @@ public class TestingPlugin : BaseUnityPlugin {
 		}
 	}
 
+	private static Dictionary<int, int> m_loved_gifts = new Dictionary<int, int>();
+
+	[HarmonyPatch(typeof(SendGiftUtils), "DoSendGiftResult")]
+	class HarmonyPatch_SendGiftUtils_DoGiftResult {
+
+		private static bool Prefix(int npcId, ref int itemId, ref GradeType gradeType) {
+			WishItemData wish_data = Module<DynamicWishModule>.Self.GetWishItemData(npcId);
+			if (wish_data != null) {
+				itemId = wish_data.itemId;
+			} else {
+				if (!m_loved_gifts.ContainsKey(npcId)) {
+					SendGiftData send_data = SendGiftData.Get(npcId);
+					foreach (GiftItemData item_data in GiftItemData.GetAll()) {
+						if (SendGiftUtils.AnyTagID(send_data.TagIdExcellent, item_data.tagA)) {
+							m_loved_gifts[npcId] = item_data.id;
+							break;
+						}
+					}
+				}
+				if (m_loved_gifts.ContainsKey(npcId)) {
+					itemId = m_loved_gifts[npcId];
+				}
+			}
+			gradeType = GradeType.None;
+			return true;
+		}
+	}
 }
