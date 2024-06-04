@@ -18,6 +18,9 @@ using Pathea.ProficiencyNs;
 using Pathea.Attr;
 using Pathea.ScenarioNs;
 using Pathea.ItemNs;
+using Pathea.DestroyableNs;
+using Pathea.ProjectileNs;
+using Pathea.SkillNs;
 
 [BepInPlugin("devopsdinosaur.sandrock.bulldozer", "Bulldozer", "0.0.1")]
 public class BulldozerPlugin : BaseUnityPlugin {
@@ -113,34 +116,36 @@ public class BulldozerPlugin : BaseUnityPlugin {
 		
 		void bulldoze_resource<T>(Player _player, AttrData _data) where T : ResourcePointBase {
 			foreach (T obj in Resources.FindObjectsOfTypeAll<T>()) {
-				if (Vector3.Distance(_player.GamePos, obj.transform.position) <= m_bulldoze_radius.Value) {
-					try {
-						float current_sp = _data.runtimeAttr[ActorRunTimeAttrType.Sp];
-						if ((bool) obj.GetType().GetField("useAutoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj)) {
-							logger.LogInfo(obj.name);
-							int autoGeneratorGroupCount = (int) obj.GetType().GetField("autoGeneratorGroupCount", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
-							GeneratorGroup autoGeneratorGroup = (GeneratorGroup) obj.GetType().GetField("autoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
-							List<int> id_list = new List<int>();
-							for (int counter = 1; counter < autoGeneratorGroupCount; counter++) {
-								obj.itemDrop.CreateDropItem(
-									autoGeneratorGroup.generatorGroupId, 
-									0f, 
-									obj.ResourcePointData.GetScale(), 
-									Module<ScenarioModule>.Self.CurScene,
-									(int) obj.GetType().GetProperty("itemLevel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj),
-									canDetected: false, 
-									delegate (List<ItemInstance> itemInstances) {
-									}, 
-									id_list
-								);
-								Module<ResourceAreaModule>.Self.GatherDropItemAction(id_list);
-								Module<ResourceAreaModule>.Self.PlayerGetResourcePointAction(obj.ResourcePointData);
-							}
+				if (Vector3.Distance(_player.GamePos, obj.transform.position) > m_bulldoze_radius.Value) {
+					continue;
+				}
+				try {
+					float current_sp = _data.runtimeAttr[ActorRunTimeAttrType.Sp];
+					if ((bool) obj.GetType().GetField("useAutoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj)) {
+						int autoGeneratorGroupCount = (int) obj.GetType().GetField("autoGeneratorGroupCount", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
+						GeneratorGroup autoGeneratorGroup = (GeneratorGroup) obj.GetType().GetField("autoGeneratorGroup", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(obj);
+						List<int> id_list = new List<int>();
+						for (int counter = 1; counter < autoGeneratorGroupCount; counter++) {
+							obj.itemDrop.CreateDropItem(
+								autoGeneratorGroup.generatorGroupId, 
+								0f, 
+								obj.ResourcePointData.GetScale(), 
+								Module<ScenarioModule>.Self.CurScene,
+								(int) obj.GetType().GetProperty("itemLevel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj),
+								canDetected: false, 
+								delegate (List<ItemInstance> itemInstances) {
+								}, 
+								id_list
+							);
+							Module<ResourceAreaModule>.Self.GatherDropItemAction(id_list);
+							Module<ResourceAreaModule>.Self.PlayerGetResourcePointAction(obj.ResourcePointData);
 						}
-						obj.GetType().GetMethod("DoGetItem", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(obj, new object[] {true});
-						Module<ProficiencyModule>.Self.AddAttrModifierByType(ProficiencyType.Gather, new AttrModifier(ModifyAttrType.FinalPlus, m_gather_exp.Value));
-						_data.runtimeAttr.SetCurrenValue(ActorRunTimeAttrType.Sp, current_sp);
-					} catch {}
+					}
+					obj.GetType().GetMethod("DoGetItem", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(obj, new object[] {true});
+					Module<ProficiencyModule>.Self.AddAttrModifierByType(ProficiencyType.Gather, new AttrModifier(ModifyAttrType.FinalPlus, m_gather_exp.Value));
+					_data.runtimeAttr.SetCurrenValue(ActorRunTimeAttrType.Sp, current_sp);
+				} catch (Exception e) {
+					logger.LogError(e);
 				}
 			}
 		}
@@ -177,14 +182,40 @@ public class BulldozerPlugin : BaseUnityPlugin {
 							continue;
 						}
 						try {
-							tree.GetType().GetMethod("ChopTree", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(tree, new object[] {player.GamePos, 999999});
+							tree.GetType().GetMethod("ChopTree", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(tree, new object[] { player.GamePos, 999999 });
 							Module<ProficiencyModule>.Self.AddAttrModifierByType(ProficiencyType.Gather, new AttrModifier(ModifyAttrType.FinalPlus, m_gather_exp.Value));
 						} catch {}
 					}
 				}
 			}
 			bulldoze_resource<ResourcePoint>(player, data);
-		}
+			foreach (DestroyableSceneItemPoint obj in Resources.FindObjectsOfTypeAll<DestroyableSceneItemPoint>()) {
+				try {
+                    DestroyableSceneItemData item_data = (DestroyableSceneItemData) obj.GetType().GetField("data", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
+                    if (!obj.gameObject.activeSelf || item_data == null || !item_data.isDisplay || item_data.hpPercent == 0 || Vector3.Distance(player.GamePos, item_data.pos) > m_bulldoze_radius.Value) {
+						continue;
+					}
+					logger.LogInfo(obj.name);
+					Module<ProjectileModule>.Self.Create(
+						"Bullet_Rifle", 
+						ShootInfo.Create(player.HeadPos, item_data.pos - player.HeadPos),
+						player.actor.GetCasterHandle()
+					);
+					/*
+                    DestroyableItem item = (DestroyableItem) obj.GetType().GetField("dItem", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
+                    item.hp = 0;
+                    HitResult hit_result = new HitResult();
+                    hit_result.hitTrans = obj.transform;
+                    hit_result.hitPos = obj.transform.position;
+                    item.GetType().GetMethod("OnChangeHp", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(item, new object[] {999999, hit_result});
+                    item.OnDeath();
+					item_data.isDisplay = false;
+					*/
+                } catch (Exception e) {
+					logger.LogError(e);
+				}
+			}
+        }
 		if (m_bulldoze_monsters.Value) {
 			Scene scene = SceneManager.GetSceneByName("Game");
 			if (scene == null) {
