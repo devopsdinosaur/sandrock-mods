@@ -57,6 +57,9 @@
     <Reference Include="BepInEx.Preloader">
       <HintPath>..\libs\BepInEx.Preloader.dll</HintPath>
     </Reference>
+    <Reference Include="Pathea.DesignerConfig">
+      <HintPath>..\libs\Pathea.DesignerConfig.dll</HintPath>
+    </Reference>
     <Reference Include="Pathea.Framework">
       <HintPath>..\libs\Pathea.Framework.dll</HintPath>
     </Reference>

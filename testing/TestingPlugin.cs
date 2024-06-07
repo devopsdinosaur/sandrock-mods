@@ -40,6 +40,9 @@ using Pathea.DynamicWishNs;
 using Pathea.ItemContainers;
 using Pathea.NpcNs;
 using Pathea.InteractiveNs;
+using Pathea.UISystemV2.Grid;
+using Pathea.CutsceneNs;
+using Pathea.GuildRanking;
 
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
@@ -100,7 +103,53 @@ public class TestingPlugin : BaseUnityPlugin {
 		}
 	}
 
-	public static void print_stack() {
+    private class PluginUpdater:MonoBehaviour {
+
+        private static PluginUpdater m_instance = null;
+        public static PluginUpdater Instance {
+            get {
+                return m_instance;
+            }
+        }
+        private class UpdateInfo {
+            public string name;
+            public float frequency;
+            public float elapsed;
+            public Action action;
+        }
+        private List<UpdateInfo> m_actions = new List<UpdateInfo>();
+
+        public static PluginUpdater create(GameObject parent) {
+            if (m_instance != null) {
+                return m_instance;
+            }
+            return (m_instance = parent.AddComponent<PluginUpdater>());
+        }
+
+        public void register(string name, float frequency, Action action) {
+            m_actions.Add(new UpdateInfo {
+                name = name,
+                frequency = frequency,
+                elapsed = frequency,
+                action = action
+            });
+        }
+
+        public void Update() {
+            foreach (UpdateInfo info in m_actions) {
+                if ((info.elapsed += Time.deltaTime) >= info.frequency) {
+                    info.elapsed = 0f;
+                    try {
+                        info.action();
+                    } catch (Exception e) {
+                        logger.LogError($"PluginUpdater.Update.{info.name} Exception - {e.ToString()}");
+                    }
+                }
+            }
+        }
+    }
+
+    public static void print_stack() {
 		for (int index = 0; ; index++) {
 			try {
 				StackFrame frame = new StackFrame(index);
@@ -393,4 +442,182 @@ public class TestingPlugin : BaseUnityPlugin {
 			return false;
 		}
 	}
+
+    [HarmonyPatch(typeof(WorldLauncher), "Awake")]
+    class HarmonyPatch_WorldLauncher_Awake {
+
+        private static bool Prefix(WorldLauncher __instance) {
+            PluginUpdater.create(__instance.gameObject);
+            PluginUpdater.Instance.register("bulldozer_update", 1, testing_update);
+            return true;
+        }
+    }
+
+	private static void testing_update() {
+
+	}
+
+	public static Dictionary<int, ItemPrototype> m_item_prototypes = null;
+	public static Dictionary<int, SellProductBaseData> m_sell_items = null;
+	public static Dictionary<int, Store> m_stores = null;
+    public static Dictionary<int, Npc> m_npcs = null;
+
+    [HarmonyPatch(typeof(ItemPrototype), "Init")]
+    class HarmonyPatch_ItemPrototype_Init {
+
+        private static bool Prefix(ItemPrototype __instance) {
+			try {
+				if (m_item_prototypes == null) {
+					m_item_prototypes = new Dictionary<int, ItemPrototype>();
+				}
+				m_item_prototypes[__instance.id] = __instance;
+			} catch (Exception e) {
+                logger.LogError("** HarmonyPatch_ItemPrototype_Init.Prefix ERROR - " + e);
+            }
+            return true;
+        }
+    }
+
+	[HarmonyPatch(typeof(SellProductBaseData), "LoadData")]
+    class HarmonyPatch_SellProductBaseData_LoadData {
+
+        private static void Postfix() {
+            try {
+                if (m_sell_items == null) {
+                    m_sell_items = new Dictionary<int, SellProductBaseData>();
+                }
+                foreach (SellProductBaseData data in SellProductBaseData.refData) {
+					m_sell_items[data.id] = data;
+					//logger.LogInfo($"id: {data.itemId}, price: {data.price}");
+				}
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_ItemPrototype_Init.Prefix ERROR - " + e);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Store), "InitRecordData")]
+    class HarmonyPatch_Store_InitRecordData {
+
+        private static void Postfix(Store __instance) {
+			try {
+				if (m_stores == null) {
+					m_stores = new Dictionary<int, Store>();
+				}
+				m_stores[__instance.id] = __instance;
+				//logger.LogInfo($"Store - id: {__instance.id}, name: {__instance.Name}");
+			} catch (Exception e) {
+				logger.LogError("** HarmonyPatch_Store_GenProduct.Prefix ERROR - " + e);
+			}
+        }
+    }
+
+	[HarmonyPatch(typeof(Store), "FetchSlot")]
+    class HarmonyPatch_Store_Deserialize {
+
+        private static bool Prefix(Store __instance) {
+            try {
+                List<ItemSlot> fetchSlots = (List<ItemSlot>) __instance.GetType().GetField("fetchSlots", BindingFlags.Instance| BindingFlags.NonPublic).GetValue(__instance);
+                __instance.ClearSlot();
+				foreach (SellProductBaseData data in m_sell_items.Values) {
+					try {
+						SellProductItem product = new SellProductItem(
+							Module<ItemInstance.Module>.Self.CreateAsDefault(data.itemId),
+							data.price,
+							data.currency
+						);
+						logger.LogInfo(product);
+						fetchSlots.Add(product);
+					} catch (Exception e) {
+						logger.LogError(e);
+					}
+					//fetchSlots.Add(product);
+				}
+                return false;
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_Store_Deserialize.Postfix ERROR - " + e);
+            }
+			return true;
+        }
+    }
+	
+    [HarmonyPatch(typeof(Npc), "CreatActor")]
+    class HarmonyPatch_Npc_CreateActor {
+
+        private static bool Prefix(Npc __instance) {
+			try {
+				if (m_npcs == null) {
+					m_npcs = new Dictionary<int, Npc>();
+				}
+				m_npcs[__instance.id] = __instance;
+			} catch (Exception e) {
+                logger.LogError("** HarmonyPatch_Npc_CreateActor.Prefix ERROR - " + e);
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(StartMenuUI), "Init")]
+    class HarmonyPatch_StartMenuUI_Init {
+
+        private static void Postfix(StartMenuUI __instance, bool ___inited) {
+            try {
+				if (!___inited) {
+					return;
+				}
+                __instance.Invoke("ResumeGame", 0.5f);
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_StartMenuUI_Init.Postfix ERROR - " + e);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Cutscene), "Start")]
+    class HarmonyPatch_Cutscene_Start {
+
+        private static void Postfix(Cutscene __instance) {
+            try {
+				if (__instance.name.StartsWith("CG_Start_")) {
+					GameObject.Destroy(__instance.gameObject);
+				}
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_Cutscene_Start.Prefix ERROR - " + e);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(EscMenuUI), "InitMenu")]
+    class HarmonyPatch_EscMenuUI_InitMenu {
+
+        private static bool Prefix(EscMenuUI __instance, ref string[] menuName) {
+            try {
+				string[] originalMenuName = menuName;
+				menuName = new string[originalMenuName.Length + 1];
+				for (int index = 0; index < originalMenuName.Length; index++) {
+					menuName[index] = originalMenuName[index];
+				}
+				menuName[originalMenuName.Length] = "Quit Application";
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_EscMenuUI_InitMenu.Prefix ERROR - " + e);
+            }
+			return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(EscMenuUI), "Button_onClick")]
+    class HarmonyPatch_EscMenuUI_Button_onClick {
+
+        private static bool Prefix(EscMenuUI __instance, GridElement element) {
+            try {
+                if (element.index < __instance.buttons.Count - 1) {
+					return true;
+				}
+				Application.Quit();
+				return false;
+            } catch (Exception e) {
+                logger.LogError("** HarmonyPatch_EscMenuUI_InitMenu.Prefix ERROR - " + e);
+            }
+            return true;
+        }
+    }
 }
