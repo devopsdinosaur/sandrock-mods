@@ -182,8 +182,10 @@ public class BulldozerPlugin : BaseUnityPlugin {
 							continue;
 						}
 						try {
+							float current_sp = data.runtimeAttr[ActorRunTimeAttrType.Sp];
 							tree.GetType().GetMethod("ChopTree", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(tree, new object[] { player.GamePos, 999999 });
 							Module<ProficiencyModule>.Self.AddAttrModifierByType(ProficiencyType.Gather, new AttrModifier(ModifyAttrType.FinalPlus, m_gather_exp.Value));
+							data.runtimeAttr.SetCurrenValue(ActorRunTimeAttrType.Sp, current_sp);
 						} catch {}
 					}
 				}
@@ -192,28 +194,16 @@ public class BulldozerPlugin : BaseUnityPlugin {
 			foreach (DestroyableSceneItemPoint obj in Resources.FindObjectsOfTypeAll<DestroyableSceneItemPoint>()) {
 				try {
                     DestroyableSceneItemData item_data = (DestroyableSceneItemData) obj.GetType().GetField("data", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
-                    if (!obj.gameObject.activeSelf || item_data == null || !item_data.isDisplay || item_data.hpPercent == 0 || Vector3.Distance(player.GamePos, item_data.pos) > m_bulldoze_radius.Value) {
+					DestroyableItem item = (DestroyableItem) obj.GetType().GetField("dItem", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
+					if (!obj.gameObject.activeSelf || obj.transform.childCount != 1 || item_data == null || !item_data.isDisplay || item.hp == 0 || Vector3.Distance(player.GamePos, item_data.pos) > m_bulldoze_radius.Value) {
 						continue;
 					}
-					logger.LogInfo(obj.name);
 					Module<ProjectileModule>.Self.Create(
 						"Bullet_Rifle", 
 						ShootInfo.Create(player.HeadPos, item_data.pos - player.HeadPos),
 						player.actor.GetCasterHandle()
 					);
-					/*
-                    DestroyableItem item = (DestroyableItem) obj.GetType().GetField("dItem", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(obj);
-                    item.hp = 0;
-                    HitResult hit_result = new HitResult();
-                    hit_result.hitTrans = obj.transform;
-                    hit_result.hitPos = obj.transform.position;
-                    item.GetType().GetMethod("OnChangeHp", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(item, new object[] {999999, hit_result});
-                    item.OnDeath();
-					item_data.isDisplay = false;
-					*/
-                } catch (Exception e) {
-					logger.LogError(e);
-				}
+                } catch {}
 			}
         }
 		if (m_bulldoze_monsters.Value) {

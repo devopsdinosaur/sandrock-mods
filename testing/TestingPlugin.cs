@@ -39,6 +39,7 @@ using Pathea.HatredNs;
 using Pathea.DynamicWishNs;
 using Pathea.ItemContainers;
 using Pathea.NpcNs;
+using Pathea.InteractiveNs;
 
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
@@ -363,6 +364,33 @@ public class TestingPlugin : BaseUnityPlugin {
 			}
 			gradeType = GradeType.None;
 			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(InteractiveOption), "CanInteractive")]
+	class HarmonyPatch_InteractiveOption_CanInteractive {
+
+		private static bool Prefix(ref bool __result) {
+			__result = true;
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(InteractiveAction_MotionAnim), "OnUpdate")]
+	class HarmonyPatch_InteractiveAction_MotionAnimLoop_OnUpdate {
+
+		private static bool Prefix(ref InteractiveResult __result) {
+			__result = InteractiveResult.Success;
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(InteractiveAction_MotionAnimLoop), "OnInputEsc")]
+	class HarmonyPatch_InteractiveAction_MotionAnimLoop_OnInputEsc {
+
+		private static bool Prefix(ref bool ___isEsc) {
+			___isEsc = true;
+			return false;
 		}
 	}
 }
