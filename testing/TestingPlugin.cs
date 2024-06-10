@@ -43,6 +43,8 @@ using Pathea.InteractiveNs;
 using Pathea.UISystemV2.Grid;
 using Pathea.CutsceneNs;
 using Pathea.GuildRanking;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
@@ -515,7 +517,7 @@ public class TestingPlugin : BaseUnityPlugin {
 				m_stores[__instance.id] = __instance;
 				//logger.LogInfo($"Store - id: {__instance.id}, name: {__instance.Name}");
 			} catch (Exception e) {
-				logger.LogError("** HarmonyPatch_Store_GenProduct.Prefix ERROR - " + e);
+				logger.LogError("** HarmonyPatch_Store_InitRecordData.Prefix ERROR - " + e);
 			}
         }
     }
@@ -525,44 +527,37 @@ public class TestingPlugin : BaseUnityPlugin {
 
         private static bool Prefix(Store __instance, List<ItemSlot> ___fetchSlots) {
             try {
-                /*
-				__instance.ClearSlot();
-				foreach (SellProductBaseData data in m_sell_items.Values) {
-					try {
-						SellProductItem product = new SellProductItem(
-							Module<ItemInstance.Module>.Self.CreateAsDefault(data.itemId),
-							data.price,
-							data.currency
-						);
-						logger.LogInfo(product);
-						___fetchSlots.Add(product);
-					} catch (Exception e) {
-						logger.LogError(e);
-					}
-					//fetchSlots.Add(product);
-				}
-                return false;
-				*/
 				if (!m_enabled.Value || __instance.id != 2) {
 					return true;
 				}
 				__instance.groupProducts = new List<GroupProductItem>();
 				__instance.singleProducts = new List<SellProduct>();
+				/*
 				foreach (SellProductBaseData data in m_sell_items.Values) {
-					logger.LogInfo($"name: {TextMgr.GetStr(data.Id)}, price: {data.price}, currency: {data.currency}, grade: {data.grade.");
-				}
-				GradeRandomData grade_random_data = new GradeRandomData(1, 1, 1, 1);
-				Season[] seasons = new Season[] {Season.Spring, Season.Summer, Season.Autumn, Season.Winter};
+					//logger.LogInfo($"id: {data.id}, name: {TextMgr.GetStr(data.itemId)}, price: {data.price}, currency: {data.currency}, grade: {string.Join(",", data.grade.gradeChance)}, seasons: {string.Join(",", data.sellSeason)}");
+                    SellProduct product = new SellProduct(data, MAX_STACK, 0, __instance);
+                    product.sellProductItem.Add(new SellProductItem(
+                        Module<ItemInstance.Module>.Self.Create(data.itemId, MAX_STACK, GradeType.Max, true),
+                        data.price,
+                        data.currency
+                    ));
+                    __instance.singleProducts.Add(product);
+                }
+				return true;
+				*/
+				GradeRandomData grade_random_data = new GradeRandomData(1, 0, 0, 0);
+				Season[] seasons = new Season[] {Season.Max};
 				foreach (int id in m_item_prototypes.Keys) {
 					ItemPrototype proto = m_item_prototypes[id];
 					if (!m_sell_items.ContainsKey(id)) {
 						m_sell_items[id] = new SellProductBaseData() {
-							id = id,
+							id = proto.infoId,
 							itemId = id,
-							price = proto.sellPrice,
-							currency = Bag.PlayerBagItemContainer.MoneyID,
+							price = new DoubleInt(Mathf.Max(proto.buyPrice, 100), 1),
+							currency = -1,
 							grade = grade_random_data,
 							sellSeason = seasons,
+							unlockDlc = new int[] {}
 						};
 					}
 					SellProductBaseData data = m_sell_items[id];
@@ -582,7 +577,17 @@ public class TestingPlugin : BaseUnityPlugin {
         }
     }
 
-	[HarmonyPatch(typeof(ItemPrototypeModule), "Get")]
+    [HarmonyPatch(typeof(StoreGroupPartUI))]
+	[HarmonyPatch("FilterChange", new Type[] {})]qweqwe
+    class HarmonyPatch_StoreGroupPartUI_FilterChange {
+
+        private static bool Prefix(int index) {
+            
+			return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(ItemPrototypeModule), "Get")]
 	class HarmonyPatch_ItemPrototypeModule_Get {
 
 		private static bool Prefix(int id, ref ItemPrototype __result) {
