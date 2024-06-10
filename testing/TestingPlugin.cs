@@ -47,6 +47,8 @@ using Pathea.GuildRanking;
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
 
+	private const int MAX_STACK = 999999;
+
 	private Harmony m_harmony = new Harmony("devopsdinosaur.sandrock.testing");
 	public static ManualLogSource logger;
 	private static ConfigEntry<bool> m_enabled;
@@ -458,6 +460,7 @@ public class TestingPlugin : BaseUnityPlugin {
 	}
 
 	public static Dictionary<int, ItemPrototype> m_item_prototypes = null;
+	public static Dictionary<int, ItemInstance> m_item_instances = null;
 	public static Dictionary<int, SellProductBaseData> m_sell_items = null;
 	public static Dictionary<int, Store> m_stores = null;
     public static Dictionary<int, Npc> m_npcs = null;
@@ -470,7 +473,12 @@ public class TestingPlugin : BaseUnityPlugin {
 				if (m_item_prototypes == null) {
 					m_item_prototypes = new Dictionary<int, ItemPrototype>();
 				}
+				if (m_item_instances == null) {
+					m_item_instances = new Dictionary<int, ItemInstance>();
+				}
 				m_item_prototypes[__instance.id] = __instance;
+				__instance.stackNumber = MAX_STACK;
+				logger.LogInfo($"ItemPrototype.Init - name: {TextMgr.GetStr(__instance.nameId)}, id: {__instance.id}");
 			} catch (Exception e) {
                 logger.LogError("** HarmonyPatch_ItemPrototype_Init.Prefix ERROR - " + e);
             }
@@ -513,12 +521,12 @@ public class TestingPlugin : BaseUnityPlugin {
     }
 
 	[HarmonyPatch(typeof(Store), "FetchSlot")]
-    class HarmonyPatch_Store_Deserialize {
+    class HarmonyPatch_Store_FetchSlot {
 
-        private static bool Prefix(Store __instance) {
+        private static bool Prefix(Store __instance, List<ItemSlot> ___fetchSlots) {
             try {
-                List<ItemSlot> fetchSlots = (List<ItemSlot>) __instance.GetType().GetField("fetchSlots", BindingFlags.Instance| BindingFlags.NonPublic).GetValue(__instance);
-                __instance.ClearSlot();
+                /*
+				__instance.ClearSlot();
 				foreach (SellProductBaseData data in m_sell_items.Values) {
 					try {
 						SellProductItem product = new SellProductItem(
@@ -527,21 +535,58 @@ public class TestingPlugin : BaseUnityPlugin {
 							data.currency
 						);
 						logger.LogInfo(product);
-						fetchSlots.Add(product);
+						___fetchSlots.Add(product);
 					} catch (Exception e) {
 						logger.LogError(e);
 					}
 					//fetchSlots.Add(product);
 				}
                 return false;
+				*/
+				if (!m_enabled.Value || __instance.id != 2) {
+					return true;
+				}
+				__instance.groupProducts = new List<GroupProductItem>();
+				__instance.singleProducts = new List<SellProduct>();
+				foreach (int id in m_item_prototypes.Keys) {
+					if (!m_sell_items.ContainsKey(id)) {
+						m_sell_items
+					}
+				}
+				
+				foreach (SellProductBaseData data in m_sell_items.Values) {
+					SellProduct product = new SellProduct(data, MAX_STACK, 0, __instance);
+					product.sellProductItem.Add(new SellProductItem(
+						Module<ItemInstance.Module>.Self.Create(data.itemId, MAX_STACK, GradeType.Max, true),
+						data.price,
+						data.currency
+					));
+					__instance.singleProducts.Add(product);
+				}
+				return true;
             } catch (Exception e) {
-                logger.LogError("** HarmonyPatch_Store_Deserialize.Postfix ERROR - " + e);
+                logger.LogError("** HarmonyPatch_Store_FetchSlot.Prefix ERROR - " + e);
             }
 			return true;
         }
     }
-	
-    [HarmonyPatch(typeof(Npc), "CreatActor")]
+
+	[HarmonyPatch(typeof(ItemPrototypeModule), "Get")]
+	class HarmonyPatch_ItemPrototypeModule_Get {
+
+		private static bool Prefix(int id, ref ItemPrototype __result) {
+			try {
+				__result = m_item_prototypes[id];
+				__result.stackNumber = MAX_STACK;
+				return false;
+			} catch (Exception e) {
+				logger.LogError("** HarmonyPatch_ItemPrototypeModule_Get.Prefix ERROR - " + e);
+			}
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(Npc), "CreatActor")]
     class HarmonyPatch_Npc_CreateActor {
 
         private static bool Prefix(Npc __instance) {
