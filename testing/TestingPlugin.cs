@@ -47,7 +47,7 @@ using Pathea.GuildRanking;
 [BepInPlugin("devopsdinosaur.sandrock.testing", "Testing", "0.0.1")]
 public class TestingPlugin : BaseUnityPlugin {
 
-	private const int MAX_STACK = 999999;
+	private const int MAX_STACK = 99999;
 
 	private Harmony m_harmony = new Harmony("devopsdinosaur.sandrock.testing");
 	public static ManualLogSource logger;
@@ -548,13 +548,24 @@ public class TestingPlugin : BaseUnityPlugin {
 				}
 				__instance.groupProducts = new List<GroupProductItem>();
 				__instance.singleProducts = new List<SellProduct>();
-				foreach (int id in m_item_prototypes.Keys) {
-					if (!m_sell_items.ContainsKey(id)) {
-						m_sell_items
-					}
-				}
-				
 				foreach (SellProductBaseData data in m_sell_items.Values) {
+					logger.LogInfo($"name: {TextMgr.GetStr(data.Id)}, price: {data.price}, currency: {data.currency}, grade: {data.grade.");
+				}
+				GradeRandomData grade_random_data = new GradeRandomData(1, 1, 1, 1);
+				Season[] seasons = new Season[] {Season.Spring, Season.Summer, Season.Autumn, Season.Winter};
+				foreach (int id in m_item_prototypes.Keys) {
+					ItemPrototype proto = m_item_prototypes[id];
+					if (!m_sell_items.ContainsKey(id)) {
+						m_sell_items[id] = new SellProductBaseData() {
+							id = id,
+							itemId = id,
+							price = proto.sellPrice,
+							currency = Bag.PlayerBagItemContainer.MoneyID,
+							grade = grade_random_data,
+							sellSeason = seasons,
+						};
+					}
+					SellProductBaseData data = m_sell_items[id];
 					SellProduct product = new SellProduct(data, MAX_STACK, 0, __instance);
 					product.sellProductItem.Add(new SellProductItem(
 						Module<ItemInstance.Module>.Self.Create(data.itemId, MAX_STACK, GradeType.Max, true),
