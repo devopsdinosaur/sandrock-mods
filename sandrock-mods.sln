@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "testing", "testing\testing.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bulldozer", "bulldozer\bulldozer.csproj", "{A9BC4A23-D41B-4CAF-BEBC-FD34AFB4BEFE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "walmart", "walmart\walmart.csproj", "{65432B91-41C5-4F90-8675-AC0BF7997965}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "easy_interactions", "easy_interactions\easy_interactions.csproj", "{D360BBD9-A337-45BF-B6B6-408ABA10D95B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{A9BC4A23-D41B-4CAF-BEBC-FD34AFB4BEFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9BC4A23-D41B-4CAF-BEBC-FD34AFB4BEFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A9BC4A23-D41B-4CAF-BEBC-FD34AFB4BEFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65432B91-41C5-4F90-8675-AC0BF7997965}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65432B91-41C5-4F90-8675-AC0BF7997965}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65432B91-41C5-4F90-8675-AC0BF7997965}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65432B91-41C5-4F90-8675-AC0BF7997965}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D360BBD9-A337-45BF-B6B6-408ABA10D95B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D360BBD9-A337-45BF-B6B6-408ABA10D95B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D360BBD9-A337-45BF-B6B6-408ABA10D95B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D360BBD9-A337-45BF-B6B6-408ABA10D95B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
