@@ -428,7 +428,7 @@ public class TestingPlugin : BaseUnityPlugin {
 		}
 	}
 
-	[HarmonyPatch(typeof(Store), "FetchSlot")]
+    [HarmonyPatch(typeof(Store), "FetchSlot")]
 	class HarmonyPatch_Store_FetchSlot {
 
 		private static void Postfix() {
@@ -445,7 +445,41 @@ public class TestingPlugin : BaseUnityPlugin {
 						logger.LogInfo($"{npc.NpcName} - {string.Join(",", suits)}");
 					}
 				}
-				Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(33);
+
+				return;
+
+                //[Info: Testing] Amirah - 19 (Starlight), 31 (Summer), 42 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(31);
+                //[Info: Testing] Catori - 23 (Starlight), 35 (Summer), 45 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(35);
+                //[Info: Testing] Elsie - 1 (Starlight), 16 (Starlight Skirt), 28 (Summer), 40 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(28);
+                //[Info: Testing] Grace - 15 (Starlight), 27 (Summer), 39 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(27);
+                //[Info: Testing] Mi-an - 21 (Starlight), 33 (Summer), 43 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(33);
+                //[Info: Testing] Matilda - 2
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(2);
+                //[Info: Testing] Nia - 24, 36, 46
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(36);
+                //[Info: Testing] Penny - 4, 5
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(4);
+
+                //[Info: Testing] Ernest - 25 (Starlight), 37 (Summer), 47 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(25);
+                //[Info: Testing] Fang - 12 (No shirt), 13 (Normal), 20 (Starlight), 32 (Summer)), 48 (Hood)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(13);
+                //[Info: Testing] Logan - 7, 8, 9, 10, 11, 18, 30
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(7);
+                //[Info: Testing] Owen - 14 (Starlight), 26 (Summer), 38 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(14);
+                //[Info: Testing] Pen - 3
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(3);
+                //[Info: Testing] Qi - 6 (Normal), 17 (Starlight), 29 (Summer), 41 (Normal)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(41);                
+                //[Info: Testing] Unsuur - 22 (Starlight), 34 (Summer), 44 (Normal), 49 (Cowboy Hat)
+                Module<NpcReplaceSuitModule>.Self.NpcRelpaceSuit(49);
+
 			} catch (Exception e) {
 				logger.LogError("** HarmonyPatch_Store_FetchSlot.Postfix ERROR - " + e);
 			}

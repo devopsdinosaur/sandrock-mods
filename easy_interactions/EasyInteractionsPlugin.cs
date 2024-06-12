@@ -15,6 +15,9 @@ using Pathea.FrameworkNs;
 using Pathea.DynamicWishNs;
 using Pathea.InteractiveNs;
 using Pathea.SocialNs;
+using Pathea.ActorNs;
+using Pathea.InteractionNs;
+using Pathea.ConversationNs;
 
 [BepInPlugin("devopsdinosaur.sandrock.easy_interactions", "Easy Interactions", "0.0.1")]
 public class EasyInteractionsPlugin : BaseUnityPlugin {
@@ -46,34 +49,12 @@ public class EasyInteractionsPlugin : BaseUnityPlugin {
 			m_quick_card_game = this.Config.Bind<bool>("General", "Instant Card Win", false, "Set to true to instantly win the animal card game.");
 			m_card_favor_value = this.Config.Bind<int>("General", "Instant Card Favor Value", 13, "Amount of favor gained from instant card game win (int, default 13 [game average from 3 wins]).");
 			m_enable_all_interactives = this.Config.Bind<bool>("General", "Enable All Interactive Actions", false, "Set to true to enable ALL interactions in the 'Interactive' submenu, regardless of friendship or legality of interspecies relations (note that obviously a lot of the animations will be wonky)");
-			m_no_esc_warning = this.Config.Bind<bool>("General", "Enable Esc Confirmation for Interactive Cutscenes", false, "Set to true to reenable the annoying 'Are you sure?' window that pops up when attempting to escape the Kiss/etc interaction cutscene (guess you like that extra click... it takes all kinds)");
+			m_no_esc_warning = this.Config.Bind<bool>("General", "Disable Esc Confirmation for Interactive Cutscenes", true, "Set to false to reenable the annoying 'Are you sure?' window that pops up when attempting to escape the Kiss/etc interaction cutscene.");
 			m_skip_interaction_cutscenes = this.Config.Bind<bool>("General", "Skip Interaction Cutscenes", false, "Set to true to make interaction (kiss/hug/etc) cutscenes die immediately (cuz they do REALLY get old).");
 			m_allow_tree_chopping = this.Config.Bind<bool>("General", "Allow Tree Chopping", false, "Set to true to keep Burgess's prying eyes (edited for language [I hate Burgess!]) somewhere else when you chop down cactuses and trees (note: this will not work if he's right next to you =P).");
 			if (m_enabled.Value) {
 				this.m_harmony.PatchAll();
 			}
-			/*
-			HarmonyMethod patch_method = new HarmonyMethod(typeof(HarmonyPatch_InteractiveAction_OnUpdate).GetMethod("Prefix", BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic));
-			foreach (Type type in new Type[] {
-				typeof(InteractiveAction_Camera),
-				typeof(InteractiveAction_CameraOribital),
-				typeof(InteractiveAction_CameraStable),
-				typeof(InteractiveAction_Motion),
-				typeof(InteractiveAction_MotionAnim),
-				typeof(InteractiveAction_MotionAnimLoop),
-				typeof(InteractiveAction_MotionAnimOnce),
-				typeof(InteractiveAction_Null),
-				typeof(InteractiveAction_Position),
-				typeof(InteractiveAction_PositionPlayer),
-				typeof(InteractiveAction_Rotation),
-				typeof(InteractiveAction_RotationPlayer),
-			}) {
-				MethodBase original_method = type.GetMethod("OnUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-				if (original_method != null && !original_method.IsVirtual) {
-					this.m_harmony.Patch(original_method, prefix: patch_method);
-				}
-			}
-			*/
 			logger.LogInfo("devopsdinosaur.sandrock.easy_interactions v0.0.1" + (m_enabled.Value ? "" : " [inactive; disabled in config]") + " loaded.");
 		} catch (Exception e) {
 			logger.LogError("** Awake FATAL - " + e);
@@ -211,34 +192,52 @@ public class EasyInteractionsPlugin : BaseUnityPlugin {
 		}
 	}
 
-	[HarmonyPatch(typeof(InteractiveMgr), "StartInteractive")]
-	class HarmonyPatch_InteractiveMgr_StartInteractive {
+	[HarmonyPatch(typeof(InteractiveMgr), "OnInteractNpc")]
+	class HarmonyPatch_InteractiveMgr_OnInteractNpc {
 
-		private static bool Prefix(InteractiveMgr __instance, List<InteractiveOption> ___options, ref InteractiveActorType type, int protoId, int instId, int optionId, InteractiveFlag flag, System.Action OnCancel, bool dontFadeIn) {
+		private static bool Prefix(
+			InteractiveMgr __instance,
+            Actor actor, 
+			ChoiceType type,
+            List<InteractiveData> ___datas
+        ) {
 			try {
-				return false;
-				if (!m_enabled.Value || !m_skip_interaction_cutscenes.Value || type != InteractiveActorType.Npc) {
+				if (!m_enabled.Value || !m_skip_interaction_cutscenes.Value) {
 					return true;
 				}
-				type = InteractiveActorType.None;
-				InteractiveOption option = ___options[(int) __instance.GetType().GetMethod("GetOptionIdx", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] { optionId })];
-				InteractiveTargetConfig targetConfig = (InteractiveTargetConfig) __instance.GetType().GetMethod("GetTargetConfig", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] {option.config.keyData, protoId});
-				Module<SocialModule>.Self.AddSocialFavor(instId, targetConfig.favor);
-				return true;
+                if (type != ChoiceType.Interactive) {
+                    return false;
+                }
+                int instId = actor.InstanceId;
+                int protoId = actor.InstanceId;
+                List<InteractiveContent> contents = (List<InteractiveContent>) __instance.GetType().GetMethod("GetOptionals", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] {InteractiveActorType.Npc, protoId});
+                if (contents.Count == 0) {
+                    Module<NpcInteractionManager>.Self.OnCancel();
+                    return false;
+                }
+                string str = TextMgr.GetStr(3196);
+                List<string> list = new List<string>();
+                for (int i = 0; i < contents.Count; i++) {
+                    list.Add(TextMgr.GetStr(contents[i].nameId));
+                }
+                list.Add(TextMgr.GetStr(20263));
+                ConvSegmentBase convSegmentBase = new ConvSegmentBase(str, list);
+                convSegmentBase.IgnoreBehavour = true;
+                convSegmentBase.OnClick = (Action<int>) Delegate.Combine(convSegmentBase.OnClick, (Action<int>) delegate (int idx) {
+                    if (idx >= 0 && idx < contents.Count) {
+                        int data_index = (int) __instance.GetType().GetMethod("GetDataIdx", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(__instance, new object[] {InteractiveActorType.Npc, protoId});
+                        ___datas[data_index].count++;
+                        ___datas[data_index].totalCount++;
+                        Module<SocialModule>.Self.AddSocialFavor(instId, 2);
+                    }
+					Module<NpcInteractionManager>.Self.OnCancel();
+                });
+                Module<ConversationManager>.Self.AddSegmentBaseToCache(convSegmentBase);
+                return false;
 			} catch (Exception e) {
-				logger.LogError("** HarmonyPatch_InteractiveMgr_StartInteractive.Prefix ERROR - " + e);
+				logger.LogError("** HarmonyPatch_InteractiveMgr_OnInteractNpc.Prefix ERROR - " + e);
 			}
 			return true;
-		}
-	}
-	
-	class HarmonyPatch_InteractiveAction_OnUpdate {
-		private static bool Prefix(ref InteractiveResult __result) {
-			if (!m_enabled.Value || !m_skip_interaction_cutscenes.Value) {
-				return true;
-			}
-			__result = InteractiveResult.Success;
-			return false;
 		}
 	}
 
